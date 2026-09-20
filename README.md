@@ -2,7 +2,7 @@
 
 Telegram bot that shows Orthodox icons for the current day.
 
-Telegram: @your_bot_username
+Telegram: @iconsDay_bot
 
 ## Features
 
