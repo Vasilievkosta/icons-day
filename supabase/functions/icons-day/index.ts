@@ -26,6 +26,104 @@ bot.command("today", async (ctx) => {
   }
 });
 
+async function saveTelegramUser(
+  supabaseAdmin: { from: (table: string) => any },
+  from: { id: number; username?: string; first_name?: string },
+) {
+  const now = new Date().toISOString();
+  const user = {
+    username: from.username ?? null,
+    first_name: from.first_name ?? null,
+    last_seen_at: now,
+  };
+
+  const { data, error: selectError } = await supabaseAdmin
+    .from("telegram_users")
+    .select("id")
+    .eq("telegram_id", from.id)
+    .maybeSingle();
+
+  if (selectError) {
+    throw selectError;
+  }
+
+  if (data) {
+    const { error } = await supabaseAdmin
+      .from("telegram_users")
+      .update(user)
+      .eq("telegram_id", from.id);
+
+    if (error) {
+      throw error;
+    }
+
+    return data.id;
+  }
+
+  const { data: inserted, error } = await supabaseAdmin
+    .from("telegram_users")
+    .insert({
+      telegram_id: from.id,
+      ...user,
+      first_seen_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return inserted.id;
+}
+
+async function saveBotRequest(
+  supabaseAdmin: { from: (table: string) => any },
+  userId: number,
+  requestType: "start" | "today",
+) {
+  const { error } = await supabaseAdmin
+    .from("bot_requests")
+    .insert({
+      user_id: userId,
+      request_type: requestType,
+    });
+
+  if (error) {
+    throw error;
+  }
+}
+
+function isStartCommand(update: {
+  message?: {
+    text?: string;
+    from?: {
+      id: number;
+      username?: string;
+      first_name?: string;
+    };
+  };
+}) {
+  const text = update.message?.text;
+
+  return typeof text === "string" && /^\/start(?:@\w+)?(?:\s|$)/.test(text);
+}
+
+function isTodayCommand(update: {
+  message?: {
+    text?: string;
+    from?: {
+      id: number;
+      username?: string;
+      first_name?: string;
+    };
+  };
+}) {
+  const text = update.message?.text;
+
+  return typeof text === "string" && /^\/today(?:@\w+)?(?:\s|$)/.test(text);
+}
+
 async function getAzbykaIcons() {
   const response = await fetch(
     "https://azbyka.ru/days/widgets/presentations.json?image=1",
@@ -53,13 +151,32 @@ async function getAzbykaIcons() {
 }
 
 export default {
-  fetch: withSupabase({ auth: ["none"] }, async (req) => {
+  fetch: withSupabase({ auth: ["none"] }, async (req, ctx) => {
     if (req.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
     }
 
     try {
       const update = await req.json();
+
+      if (isStartCommand(update) && update.message?.from) {
+        const userId = await saveTelegramUser(
+          ctx.supabaseAdmin,
+          update.message.from,
+        );
+
+        await saveBotRequest(ctx.supabaseAdmin, userId, "start");
+      }
+
+      if (isTodayCommand(update) && update.message?.from) {
+        const userId = await saveTelegramUser(
+          ctx.supabaseAdmin,
+          update.message.from,
+        );
+
+        await saveBotRequest(ctx.supabaseAdmin, userId, "today");
+      }
+
       await botInit;
       await bot.handleUpdate(update);
 
