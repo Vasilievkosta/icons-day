@@ -5,7 +5,12 @@ import { withSupabase } from "@supabase/server";
 const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
 const botInit = bot.init();
 
-bot.command("start", (ctx) => ctx.reply("Icons of the Day работает!"));
+bot.command("start", (ctx) =>
+  ctx.reply(
+    "Добро пожаловать! 🕊️\n\n" +
+      "Нажмите /today, чтобы увидеть иконы на сегодня.",
+  )
+);
 
 bot.command("today", async (ctx) => {
   try {
