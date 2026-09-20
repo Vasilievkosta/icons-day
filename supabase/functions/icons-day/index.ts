@@ -3,6 +3,7 @@ import { Bot } from "grammy";
 import { withSupabase } from "@supabase/server";
 
 const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
+const botInit = bot.init();
 
 bot.command("start", (ctx) => ctx.reply("Icons of the Day работает!"));
 
@@ -40,10 +41,12 @@ export default {
 
     try {
       const update = await req.json();
+      await botInit;
       await bot.handleUpdate(update);
 
       return new Response("OK");
     } catch (error) {
+      console.error("icons-day webhook error:", error);
       return Response.json(
         {
           error: error instanceof Error ? error.message : String(error),
