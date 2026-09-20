@@ -7,6 +7,25 @@ const botInit = bot.init();
 
 bot.command("start", (ctx) => ctx.reply("Icons of the Day работает!"));
 
+bot.command("today", async (ctx) => {
+  try {
+    const icons = await getAzbykaIcons();
+
+    for (const icon of icons) {
+      const photo = icon.imgLarge || icon.img;
+
+      if (!photo) {
+        continue;
+      }
+
+      await ctx.replyWithPhoto(photo, { caption: icon.title });
+    }
+  } catch (error) {
+    console.error("icons-day today error:", error);
+    await ctx.reply("Не удалось получить иконы дня. Попробуйте позже.");
+  }
+});
+
 async function getAzbykaIcons() {
   const response = await fetch(
     "https://azbyka.ru/days/widgets/presentations.json?image=1",
