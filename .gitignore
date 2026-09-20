@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Build
+dist/
+build/
+
+# Supabase
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+supabase/.branches/
